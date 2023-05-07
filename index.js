@@ -12,17 +12,11 @@ import * as c from "./cli/colors.js";
 // eslint-disable-next-line no-unused-vars
 import u from "ak-tools";
 
-//todo
-// $ npm scripts
-// $ launch.json
-// $ tasks.json
-
 /**
  * do stuff
  * @param  {Types.Config} config
  */
 async function main(config) {
-	console.log(config);
 	return config;
 }
 
