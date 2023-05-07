@@ -5,7 +5,7 @@ const { name: NAME, version: VERSION } = require("../package.json");
 
 /**
  * the CLI for putting the config in the command line
- * @return {Config}
+ * @return {Types.Config}
  */
 function cli() {
 	const args = yargs(process.argv.splice(2))
@@ -19,23 +19,42 @@ npx  --yes  ${NAME}
 
 DOCS: https://github.com/ak--47/`
 		)
-		.option("foo", {
+		.option("file", {
 			demandOption: true,
-			describe: "baz",
+			describe: "path to file",
 			type: "string",
-			default: "foo",
+			alias: "f",
 		})
-		.option("bar", {
-			demandOption: true,
-			describe: "baz",
+		.option("format", {
+			demandOption: false,
+			describe: "json, jsonl, csv, or tsv",
+			type: "string",
+			alias: "t",
+			default: "jsonl",
+		})
+		.option("project_id", {
+			demandOption: false,
+			alias: "project",
+			describe: "mixpanel project id",
 			type: "number",
-			default: 42,
 		})
-		.option("baz", {
-			demandOption: true,
-			describe: "baz",
-			type: "boolean",
-			default: false,
+		.option("project_token", {
+			demandOption: false,
+			alias: "token",
+			describe: "mixpanel project token",
+			type: "string",
+		})
+		.option("project_secret", {
+			demandOption: false,
+			alias: "project",
+			describe: "mixpanel project secret",
+			type: "string",
+		})
+		.option("open_ai_key", {
+			demandOption: false,
+			alias: "gtp",
+			describe: "chat gpt api key",
+			type: "string",
 		})
 
 		.help().argv;
