@@ -5,7 +5,7 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"command": "npm run prune && npm run scratch",
+			"command": "npm run scratch",
 			"name": "scratch",
 			"request": "launch",
 			"type": "node-terminal"
