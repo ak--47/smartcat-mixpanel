@@ -16,6 +16,6 @@
 	},
 	"rules": {
 		
-		"prettier/prettier": [2, { "useTabs": true }]
+		"prettier/prettier": [2, { "useTabs": true, "printWidth": 120 }]
 	}
 }

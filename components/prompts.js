@@ -131,10 +131,79 @@ export function getPrompt(sourceData) {
 }`,
 		},
 		{
+			role: "system",
+			name: "example_user",
+			content: `this is my source data:
+
+{"Ad status":"Enabled","Final URL":"https://aktunes.com","Beacon URLs":" --","Headline":" --","Long headline 1":" --","Long headline 2":" --","Long headline 3":" --","Long headline 4":" --","Long headline 5":" --","Headline 1":"AK's music","Headline 1 position":" --","Headline 2":"lovingly made","Headline 2 position":" --","Headline 3":"candy for ears","Headline 3 position":" --","Headline 4":" --","Headline 4 position":" --","Headline 5":" --","Headline 5 position":" --","Headline 6":" --","Headline 6 position":" --","Headline 7":" --","Headline 7 position":" --","Headline 8":" --","Headline 8 position":" --","Headline 9":" --","Headline 9 position":" --","Headline 10":" --","Headline 10 position":" --","Headline 11":" --","Headline 11 position":" --","Headline 12":" --","Headline 12 position":" --","Headline 13":" --","Headline 13 position":" --","Headline 14":" --","Headline 14 position":" --","Headline 15":" --","Headline 15 position":" --","Description 1":"AK | the aesthetic of maximalism","Description 1 position":" --","Description 2":"Epochs, Genres, Bands, Artists, Albums, Songs, Bars, Notes, Timbres, Frequencies","Description 2 position":" --","Description 3":" --","Description 3 position":" --","Description 4":" --","Description 4 position":" --","Description 5":" --","Call to action text":" --","Call to action text 1":" --","Call to action text 2":" --","Call to action text 3":" --","Call to action text 4":" --","Call to action text 5":" --","Call to action headline":" --","Video ID":" --","Companion banner":" --","Ad name":" --","ad.display_url":" --","Path 1":" --","Path 2":" --","Mobile final URL":"","Tracking template":" --","Final URL suffix":" --","Custom parameter":"","Campaign":"ak-tunes-first-ad","Ad group":"Ad group 1","Status":"Pending","Status reasons":"under review","Ad type":"Responsive search ad","Currency code":"USD","Avg. CPV":" --","Impr.":"0","Interactions":"0","Interaction rate":" --","Avg. cost":" --","Cost":"0.00","Video":" --", "Date": "2023-01-01"}`,
+		},
+		{
+			role: "system",
+			name: "example_assistant",
+			content: `function transformToMixpanelEvent(sourceData) {
+  const { "Final URL": finalUrl, "Ad group": adGroup, "Campaign": campaign, "Status": status, "Cost": cost, ...otherProperties } = sourceData;
+  const time = new Date().getTime();
+
+  return {
+    event: "Ad Viewed",
+    properties: {
+      time,
+      distinct_id: finalUrl,
+      "$insert_id": adGroup+'-'+campaign+'-'+status+'-'+cost,
+      ...otherProperties,
+    },
+  };
+}`,
+		},
+		{
+			role: "system",
+			name: "example_user",
+			content: `that was NOT correct. specifically:
+			
+the distinct_id should use the Campaign value, not the finalUrl value. time should use the Data value, not current time. the $insert_id should be a concatenation of Ad group, and Ad type.
+
+can you try again? this is my source data:
+
+${JSON.stringify(sourceData)}`,
+		},
+		{
+			role: "system",
+			name: "example_assistant",
+			content: `function transformToMixpanelEvent(sourceData) {
+  const { "Ad group": adGroup, "Campaign": campaign, "Ad type": adType, "Date" : date, ...otherProperties } = sourceData;
+  const time = new Date(date).getTime();
+
+  return {
+    event: "Ad Viewed",
+    properties: {
+      time,
+      distinct_id: campaign,
+      "$insert_id": adGroup+'-'adType,
+    },
+  };
+}`,
+		},
+		{
 			role: "user",
 			content: `this is my source data:
 
 ${JSON.stringify(sourceData)}`,
+		},
+	];
+}
+
+export function improvePrompt(sourceData, userFeedback) {
+	return [
+		{
+			role: "user",
+			content: `that was NOT correct. specifically:
+			
+${userFeedback}
+
+can you try again? this is my source data:
+
+${JSON.stringify(sourceData)}
+			`,
 		},
 	];
 }
