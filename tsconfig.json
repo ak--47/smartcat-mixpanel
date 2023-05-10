@@ -4,9 +4,9 @@
 		"allowJs": true,
 		"checkJs": true,
 		"module": "NodeNext",
-		"resolveJsonModule": true
+		"resolveJsonModule": true,
+		"maxNodeModuleJsDepth": 1,
+		"allowSyntheticDefaultImports": true
 	},
-	"exclude": [
-		"node_modules"
-	]
+	"exclude": ["node_modules"]
 }
