@@ -25,6 +25,7 @@ async function main(config) {
 
 	//this becomes function transToMp() { ... }
 	//comes from gpt
+	console.log("\n\nCONSULTING 3.5 TURBO...\n\n".cyan);
 	const transformAsText = await gpt(sourceData[0], open_ai_key);
 	let transform;
 	let transformSample;
@@ -39,7 +40,7 @@ async function main(config) {
 	}
 
 	//show the user what's about to happen:
-	console.log(`\n\nSOURCE:\n`.red);
+	console.log(`\n\nSOURCE:`.red);
 	console.log(u.json(sourceData[0]));
 	console.log(`\n\nFUNCTION:`.blue);
 	console.log(transformAsText);
@@ -47,18 +48,17 @@ async function main(config) {
 	console.log(transformSample);
 
 	//write log file
-	const log = `${new Date()}\n\nSOURCE:\n${u.json(
-		sourceData[0]
-	)}\n\nFUNCTION:\n${transformAsText}\n\nTRANSFORMED:\n${u.json(
-		sourceData.map(transform)
-	)}`;
+	const log = `${new Date()}`
+		.concat(`\n\nSOURCE (sample):\n${u.json(sourceData[0])}`)
+		.concat(`\n\nFUNCTION WRITTEN:\n${transformAsText}`)
+		.concat(`\n\nTRANSFORMED (sample):\n${u.json(transformSample)}`);
 	await u.touch(`./tmp/log-${Date.now()}.txt`, log, false);
 
 	//todo ask user if they want to continue
 
 	//todo allow user to "guide" transform
 	const imported = await mixpanel(sourceData, config, transform);
-	console.log(`RESULTS:`.yellow);
+	console.log(`\n\nRESULTS:`.yellow);
 	console.log(u.json(imported));
 	return imported;
 }
