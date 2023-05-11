@@ -5,6 +5,9 @@ import * as dotenv from "dotenv";
 import inquirer from "inquirer";
 import { existsSync } from "fs";
 dotenv.config();
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { name: NAME, version: VERSION } = require("../package.json");
 
 import cli from "./cli/cli.js";
 // import server from "./server/server.js";
@@ -14,6 +17,9 @@ import storage from "./components/persistence.js";
 import * as c from "./cli/colors.js";
 import u from "ak-tools";
 import Papa from "papaparse";
+//tracking
+const track = u.tracker(`${NAME}-${VERSION}}`, `beec588098f307aea3674d97130498ca`);
+const sessionId = u.uuid();
 
 import gpt, { getGPTModels } from "./components/openai.js";
 import mixpanel from "./components/mixpanel.js";
@@ -25,6 +31,7 @@ const divider = `\n---------------------------------\n`.rainbow;
  * @param  {Types.Config | Object} config
  */
 async function main(config) {
+	track("start", { sessionId });
 	let { format = ``, openai_api_key = ``, mixpanel_secret = ``, file = "" } = config;
 	//if no file use args
 	if (!file) file = config?._?.[0] || "";
@@ -53,6 +60,7 @@ async function main(config) {
 
 	//feedback loop
 	feedbackLoop: while (shouldContinue === false) {
+		track("attempt", { sessionId, selectedModel, temperature });
 		try {
 			({ transform, log, transformAsText } = await gptWriteTransform(
 				sourceData,
@@ -62,8 +70,10 @@ async function main(config) {
 				selectedModel,
 				temperature
 			));
+			track("success", { sessionId, selectedModel, temperature });
 		} catch (e) {
 			console.log(`ERROR: ${selectedModel} failed to write valid javascript`.red);
+			track("fail", { sessionId });
 			const { shouldContinue } = await inquirer.prompt([
 				{
 					type: `confirm`,
@@ -75,8 +85,10 @@ async function main(config) {
 			if (shouldContinue) {
 				temperature += 0.1; //turn up the heat!
 				selectedModel = await selectGPTModel(openai_api_key); //try a different model
+				track("fail", { sessionId, selectedModel, temperature });
 				continue feedbackLoop;
 			} else {
+				track("quit", { sessionId, selectedModel, temperature });
 				console.log(`OK BYE!\n\n`.rainbow);
 				process.exit(0);
 			}
@@ -94,6 +106,7 @@ async function main(config) {
 		]));
 
 		if (shouldContinue === false) {
+			track("revise", { sessionId, selectedModel, temperature });
 			console.log(divider);
 			console.log(`acknowledged...\n`);
 			({ userFeedback } = await inquirer.prompt([
@@ -104,6 +117,7 @@ async function main(config) {
 				},
 			]));
 		} else {
+			track("accept", { sessionId, selectedModel, temperature });
 			console.log(divider);
 			console.log(`👍 😎 👌` + `\tAWESOME!`.rainbow + `\n\n`);
 		}
@@ -129,11 +143,15 @@ async function main(config) {
 
 	//data import
 	if (shouldImport) {
+		track("start import", { sessionId, selectedModel, temperature });
 		const imported = await mixpanel(sourceData, config, transform);
+		const { success, batches, failed, eps, rps, total } = imported;
+		track("finish import", { sessionId, selectedModel, temperature, success, batches, failed, eps, rps, total });
 		console.log(`\n\nRESULTS:`.cyan);
 		console.log(u.json(imported));
 		return imported;
 	} else {
+		track("quit", { sessionId, selectedModel, temperature });
 		console.log(`\n\nOK BYE!\n\n`.rainbow);
 		process.exit(0);
 	}
