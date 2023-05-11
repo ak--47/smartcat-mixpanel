@@ -1,7 +1,7 @@
 {
     "name": "smartcat-mixpanel",
-    "version": "1.0.0",
-    "description": "that is cool!",
+    "version": "1.0.1",
+    "description": "one smart cat... who loves importing event data into mixpanel",
     "main": "index.js",
     "scripts": {
         "start": "node index.js",

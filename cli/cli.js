@@ -54,6 +54,13 @@ DOCS: https://github.com/ak--47/snowcat-gpt`
 			describe: "chat gpt api key",
 			type: "string",
 		})
+		.option("clear", {
+			demandOption: false,
+			alias: "d",
+			describe: "delete all stored data",
+			type: "boolean",
+			default: false,
+		})
 
 		.help().argv;
 

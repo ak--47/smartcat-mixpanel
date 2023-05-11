@@ -6,6 +6,7 @@ const instance = {
 	init,
 	get,
 	set,
+	remove,
 };
 
 async function init() {
@@ -25,6 +26,13 @@ async function set(name = "OPENAI_API_KEY", data) {
 	if (!initialized) await init();
 	// @ts-ignore
 	return await storage.setItem(name, data);
+}
+
+async function remove() {
+	if (!initialized) await init();
+	// @ts-ignore
+	await storage.clear();
+	return {};
 }
 
 export default instance;

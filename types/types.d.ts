@@ -5,7 +5,7 @@ declare namespace Types {
 		mixpanel_id?: number;
 		mixpanel_token?: string;
 		mixpanel_secret?: string;
-		open_ai_key?: string;
+		openai_api_key?: string;
 		
 	}
 

@@ -3,7 +3,7 @@
 import esMain from "es-main";
 import * as dotenv from "dotenv";
 import inquirer from "inquirer";
-import path from "path";
+import { existsSync } from "fs";
 dotenv.config();
 
 import cli from "./cli/cli.js";
@@ -15,7 +15,7 @@ import * as c from "./cli/colors.js";
 import u from "ak-tools";
 import Papa from "papaparse";
 
-import gpt from "./components/openai.js";
+import gpt, { getGPTModels } from "./components/openai.js";
 import mixpanel from "./components/mixpanel.js";
 
 const divider = `\n---------------------------------\n`.rainbow;
@@ -25,17 +25,20 @@ const divider = `\n---------------------------------\n`.rainbow;
  * @param  {Types.Config | Object} config
  */
 async function main(config) {
-	let { format = ``, open_ai_key = ``, mixpanel_secret = ``, file = "" } = config;
+	let { format = ``, openai_api_key = ``, mixpanel_secret = ``, file = "" } = config;
 	//if no file use args
-	if (!file) file = process.argv[2];
+	if (!file) file = config?._?.[0] || "";
 
 	//check for open ai key + store
-	if (!open_ai_key) open_ai_key = await getOpenAIKey();
-	await storage.set(`open_ai_key`, open_ai_key);
+	if (!openai_api_key) openai_api_key = await getOpenAIKey();
+	await storage.set(`open_ai_key`, openai_api_key);
 
 	//check for mixpanel project secret + store
 	if (!mixpanel_secret) mixpanel_secret = await getMixpanelProjectSecret();
 	await storage.set(`mixpanel_secret`, mixpanel_secret);
+
+	//select a GPT model
+	let selectedModel = await selectGPTModel(openai_api_key);
 
 	//check format + parse
 	const sourceData = await getFormatAndDataAsJson(file, format);
@@ -46,18 +49,21 @@ async function main(config) {
 	let log = ``;
 	let shouldContinue = false;
 	let userFeedback = ``;
+	let temperature = 0;
 
 	//feedback loop
 	feedbackLoop: while (shouldContinue === false) {
 		try {
-			({ transform, log, transformAsText } = await haveGPTWriteTransform(
+			({ transform, log, transformAsText } = await gptWriteTransform(
 				sourceData,
-				open_ai_key,
+				openai_api_key,
 				transformAsText,
-				userFeedback
+				userFeedback,
+				selectedModel,
+				temperature
 			));
 		} catch (e) {
-			console.log(`ERROR: GPT failed to write valid javascript`.red);
+			console.log(`ERROR: ${selectedModel} failed to write valid javascript`.red);
 			const { shouldContinue } = await inquirer.prompt([
 				{
 					type: `confirm`,
@@ -67,9 +73,11 @@ async function main(config) {
 				},
 			]);
 			if (shouldContinue) {
+				temperature += 0.1; //turn up the heat!
+				selectedModel = await selectGPTModel(openai_api_key); //try a different model
 				continue feedbackLoop;
 			} else {
-				console.log(`ok... bye!`.rainbow);
+				console.log(`OK BYE!\n\n`.rainbow);
 				process.exit(0);
 			}
 		}
@@ -87,7 +95,7 @@ async function main(config) {
 
 		if (shouldContinue === false) {
 			console.log(divider);
-			console.log(`ack...\n`);
+			console.log(`acknowledged...\n`);
 			({ userFeedback } = await inquirer.prompt([
 				{
 					type: `input`,
@@ -97,12 +105,18 @@ async function main(config) {
 			]));
 		} else {
 			console.log(divider);
-			console.log(`👍 😎 👌` + `\tAWESOME!`.rainbow);
+			console.log(`👍 😎 👌` + `\tAWESOME!`.rainbow + `\n\n`);
 		}
 	}
 
 	//log
-	await u.touch(`./tmp/log-${Date.now()}.txt`, log, false);
+	//check if ./tmp exists
+	const tmpExists = existsSync("./tmp");
+	if (tmpExists) {
+		await u.touch(`./tmp/gtp-log-${Date.now()}.txt`, log, false);
+	} else {
+		await u.touch(`./gtp-log-${Date.now()}.txt`, log, false);
+	}
 
 	const { shouldImport } = await inquirer.prompt([
 		{
@@ -120,14 +134,28 @@ async function main(config) {
 		console.log(u.json(imported));
 		return imported;
 	} else {
-		console.log(`\n\nOK BYE!`.rainbow);
+		console.log(`\n\nOK BYE!\n\n`.rainbow);
 		process.exit(0);
 	}
 }
 
-async function haveGPTWriteTransform(sourceData, open_ai_key, transFormAsText = ``, userFeedback = ``) {
-	console.log(`\n\nCONSULTING 3.5 TURBO...`.cyan);
-	const transformAsText = await gpt(sourceData[0], open_ai_key, transFormAsText, userFeedback);
+async function selectGPTModel(openai_key) {
+	const models = await getGPTModels(openai_key);
+	const { selectedModel } = await inquirer.prompt([
+		{
+			type: `list`,
+			name: `selectedModel`,
+			message: `Select a GPT model`,
+			choices: models,
+			default: `gpt-3.5-turbo`,
+		},
+	]);
+	return selectedModel;
+}
+
+async function gptWriteTransform(sourceData, open_ai_key, transFormAsText = ``, userFeedback = ``, model, temperature) {
+	console.log(`\n\nCONSULTING ${model.toUpperCase()}...`.cyan);
+	const transformAsText = await gpt(sourceData[0], open_ai_key, transFormAsText, userFeedback, model, temperature);
 	console.log(`\t...we got a response!\n\n`.yellow);
 	let transform;
 	let transformSample;
@@ -159,8 +187,8 @@ async function haveGPTWriteTransform(sourceData, open_ai_key, transFormAsText = 
 }
 
 async function getFormatAndDataAsJson(file, format) {
-	path;
 	let parsedFile;
+	console.log(`\n\nLooking for file...`.cyan);
 	//if no file, ask for it
 	if (!file) {
 		({ file } = await inquirer.prompt([
@@ -173,6 +201,8 @@ async function getFormatAndDataAsJson(file, format) {
 
 		//strip quotes from file
 		file = file.replace(/"/g, "").replace(/'/g, "");
+	} else {
+		console.log(`\t...found file:${file}`.yellow);
 	}
 	//if no format, try to guess based on file extension
 	if (file && !format) {
@@ -236,28 +266,28 @@ async function getOpenAIKey() {
 	//first check env
 	if (process.env.OPENAI_API_KEY) {
 		console.log(`\t...found OpenAI key from env`.yellow + `  👍`);
-		return process.env.OPEN_AI_KEY;
+		return process.env.OPENAI_API_KEY;
 	}
 
 	//then check storage
-	const key_in_storage = await storage.get(`open_ai_key`);
+	const key_in_storage = await storage.get(`openai_api_key`);
 
 	if (key_in_storage) {
 		console.log(`\t...found OpenAI from storage`.yellow + `  👍`);
-		process.env.OPEN_AI_KEY = key_in_storage;
+		process.env.OPENAI_API_KEY = key_in_storage;
 		return key_in_storage;
 	}
 	console.log(`\t...didn't find it`.red + `  👎\n`);
 	//then ask
-	const { open_ai_key } = await inquirer.prompt([
+	const { open_ai_api_key } = await inquirer.prompt([
 		{
 			type: `input`,
-			name: `open_ai_key`,
+			name: `open_ai_api_key`,
 			message: `What is your OpenAI key?`,
 		},
 	]);
-	process.env.OPEN_AI_KEY = open_ai_key;
-	return open_ai_key;
+	process.env.OPENAI_API_KEY = open_ai_api_key;
+	return open_ai_api_key;
 }
 
 async function getMixpanelProjectSecret() {
@@ -293,15 +323,29 @@ export default main;
 if (esMain(import.meta)) {
 	const params = cli();
 
-	main(params)
-		.then(() => {
-			//noop
-		})
-		.catch((e) => {
-			console.log(`\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n`);
-		})
-		.finally(() => {
-			console.log("\n\nhave a great day!\n\n");
-			process.exit(0);
-		});
+	if (params.clear) {
+		storage
+			.remove()
+			.then(() => {
+				console.log(`\n\nstorage cleared!\n\n`.cyan);
+			})
+			.catch((e) => {
+				console.log(`\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n`.red);
+			})
+			.finally(() => {
+				process.exit(0);
+			});
+	} else {
+		main(params)
+			.then(() => {
+				//noop
+			})
+			.catch((e) => {
+				console.log(`\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n`.red);
+			})
+			.finally(() => {
+				console.log("\n\nhave a great day!\n\n".cyan);
+				process.exit(0);
+			});
+	}
 }
