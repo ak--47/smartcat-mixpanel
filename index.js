@@ -7,7 +7,7 @@ import { existsSync } from "fs";
 dotenv.config();
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const { name: NAME, version: VERSION } = require("../package.json");
+const { name: NAME, version: VERSION } = require("./package.json");
 
 import cli from "./cli/cli.js";
 // import server from "./server/server.js";
@@ -38,7 +38,7 @@ async function main(config) {
 
 	//check for open ai key + store
 	if (!openai_api_key) openai_api_key = await getOpenAIKey();
-	await storage.set(`open_ai_key`, openai_api_key);
+	await storage.set(`openai_api_key`, openai_api_key);
 
 	//check for mixpanel project secret + store
 	if (!mixpanel_secret) mixpanel_secret = await getMixpanelProjectSecret();
@@ -220,15 +220,15 @@ async function getFormatAndDataAsJson(file, format) {
 		//strip quotes from file
 		file = file.replace(/"/g, "").replace(/'/g, "");
 	} else {
-		console.log(`\t...found file:${file}`.yellow);
+		console.log(`\t...found file: ${file}`.yellow);
 	}
 	//if no format, try to guess based on file extension
 	if (file && !format) {
-		if (file.endsWith(".jsonl") || file.endsWith(".ndjson")) {
+		if (file.toLowerCase().endsWith(".jsonl") || file.toLowerCase().endsWith(".ndjson")) {
 			format = "jsonl";
-		} else if (file.endsWith(".json")) {
+		} else if (file.toLowerCase().endsWith(".json")) {
 			format = "json";
-		} else if (file.endsWith(".csv") || file.endsWith(".tsv")) {
+		} else if (file.toLowerCase().endsWith(".csv") || file.toLowerCase().endsWith(".tsv")) {
 			format = "csv";
 		}
 	}
