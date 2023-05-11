@@ -2,21 +2,22 @@
 
 export function getPrompt(sourceData) {
 	return [
+		//set the stage
 		{
 			role: "system",
 			content: `You are a bot that writes a single function declaration which transforms a javascript object. You ONLY respond in CODE. Your function should have with one input - sourceData - and one output - transformed data. The function must not have any side effects, not use any external libraries or rely on external state. The user will give you sourceData.
 
-			Your function declaration should construct a mixpanel event from sourceData. A mixpanel event has the following shape:
-			
-			- a key named "event" which is a string that represents the event be logged. 
-			- a key named "properties" which is an object that MUST contain:			
-				- time:  properties must contain a key "time" which is unix epoch time 
-				- distinct_id: the user_id or uuid of the user who triggered the event
-			- the "properties" object MAY contain:	
-				- $insert_id: a unique id for the event
-				- other properties: ALL OTHER properties in sourceData should be copied to properties
+			Your function declaration should construct a mixpanel event from sourceData.
 
-			here is an example of a mixpanel event with the event name "button click" and the properties "time" and "distinct_id":
+			here is an example of sourceData:
+			{
+				"action": "button click",
+				"timestamp": 1683684033648,
+				"user_id": "1234",
+				"button_name": "sign up",
+			}
+
+			here is an example of the transformed data as a mixpanel event:
 			{
 				"event": "button click",
 				"properties": {
@@ -25,21 +26,30 @@ export function getPrompt(sourceData) {
 					"button_name": "sign up",									
 				}
 			}
-			`,
+			
+			a mixpanel event has two REQUIRED keys:
+			- a key named "event" which is a string that represents the event be logged. 
+			- a key named "properties" which is an object that MUST contain:			
+				- time:  properties must contain a key "time" which is unix epoch time 
+				- distinct_id: the user_id or uuid of the user who triggered the event
+			
+			- the "properties" object MAY contain:	
+				- $insert_id: a unique id for the event
+				- other properties: ALL OTHER properties in sourceData should be copied to properties`,
 		},
 		{
 			role: "system",
-			name: "example_user",
+			name: "example_user_foo",
 			content: `this is my source data:
 
 {"action":"page_view", "row_id":"49e3b7fa1ed8cae6c510fdb4c99d9ed18f5919c4","user_id":"7e1dd089-8773-5fc9-a3bc-37ba5f186ffe","time":1682604914,"colorTheme":"indigo","luckyNumber":"29"}`,
 		},
 		{
 			role: "system",
-			name: "example_assistant",
+			name: "example_assistant_foo",
 			content: `function transformToMixpanelEvent(sourceData) {
   const {time, user_id, row_id, ...otherProps} = sourceData;
-  const mixpanelEvent = {
+  return {
     event: sourceData.action,
     properties: {
       time: sourceData.time,
@@ -47,20 +57,19 @@ export function getPrompt(sourceData) {
 	  $insert_id: sourceData.row_id,
       ...otherProps,
     }
-  };
-  return mixpanelEvent;
+  }
 }`,
 		},
 		{
 			role: "system",
-			name: "example_user",
+			name: "example_user_bar",
 			content: `this is my source data:
 
 { "timestamp": "2023-05-08T02:13:00+00:00", "type": "checkout", "items": ["milk", "eggs", "sugar"], "receipt": "65-342-453-1435", "total": 420, "currency": "USD", "email": "foo@bar.com", "user_id": "1b2d-32122-fjksds", idempotency_key: "ab07acbb1e496801937adfa772424bf7"}`,
 		},
 		{
 			role: "system",
-			name: "example_assistant",
+			name: "example_assistant_bar",
 			content: `function transformToMixpanelEvent(sourceData) {
   const { timestamp, user_id, idempotency_key, ...otherProperties } = sourceData;
   const time = new Date(timestamp).getTime();
@@ -112,35 +121,66 @@ export function getPrompt(sourceData) {
 			role: "system",
 			name: "example_assistant",
 			content: `function transformData(sourceData) {
-  const mixpanelEvent = {
-    event: sourceData.event_type,
+  const { event_time, event_type, user_id, ...otherProperties } = sourceData;
+  return {
+    event: event_type,
     properties: {
-      time: Math.floor(new Date(sourceData.event_time).getTime() / 1000),
-      distinct_id: sourceData.user_id
+      time: new Date(event_time).getTime(),
+      distinct_id: user_id,
+	  ...otherProperties,
     }
   };
-
-  if (sourceData.event_properties.$insert_id) {
-    mixpanelEvent.properties.$insert_id = sourceData.event_properties.$insert_id;
-    delete sourceData.event_properties.$insert_id;
-  }
-
-  Object.assign(mixpanelEvent.properties, sourceData.event_properties);
-
-  return mixpanelEvent;
 }`,
+		},
+		{
+			role: "user",
+			content: `this is my source data:
+
+${JSON.stringify(sourceData)}`,
+		},
+	];
+}
+
+export function improvePrompt(sourceData, priorFn, userFeedback) {
+	return [
+		{
+			role: "system",
+			content: `You are a bot that is assisting a programmer who is writing a single function declaration which transforms a javascript object. You ONLY respond in CODE. The programmer will give you:
+			
+			- source data: a javascript object needs to be transformed
+			- a function declaration: a function that the programmer has already written. it takes the source data as input and transforms it into a mixpanel event.
+			- description: a series of instructions on how to change the code so that it properly transforms the source data into a mixpanel event.
+
+			here is an example of a mixpanel event with the event name "button click" and the REQUIRED properties "time" and "distinct_id":
+			
+			{
+				"event": "button click",
+				"properties": {
+					"time": 1683684033648,
+					"distinct_id": "1234",
+					"button_name": "sign up",									
+				}
+			}
+			
+			in a mixpanel event:
+			- the "event" key is a string that represents the NAME of			
+			- a "properties" key which is an object that MUST contain keys "time" and "distinct_id":			
+				- time: the time or date the event occurred; MUST be in unix epoch time 
+				- distinct_id: the user_id or uuid of the user who triggered the event
+			- the "properties" object MAY OPTIONALLY contain:	
+				- $insert_id: a unique id for the event used for deduplication
+				- other properties: ALL OTHER properties in sourceData should be copied to properties`,
 		},
 		{
 			role: "system",
 			name: "example_user",
 			content: `this is my source data:
 
-{"Ad status":"Enabled","Final URL":"https://aktunes.com","Beacon URLs":" --","Headline":" --","Long headline 1":" --","Long headline 2":" --","Long headline 3":" --","Long headline 4":" --","Long headline 5":" --","Headline 1":"AK's music","Headline 1 position":" --","Headline 2":"lovingly made","Headline 2 position":" --","Headline 3":"candy for ears","Headline 3 position":" --","Headline 4":" --","Headline 4 position":" --","Headline 5":" --","Headline 5 position":" --","Headline 6":" --","Headline 6 position":" --","Headline 7":" --","Headline 7 position":" --","Headline 8":" --","Headline 8 position":" --","Headline 9":" --","Headline 9 position":" --","Headline 10":" --","Headline 10 position":" --","Headline 11":" --","Headline 11 position":" --","Headline 12":" --","Headline 12 position":" --","Headline 13":" --","Headline 13 position":" --","Headline 14":" --","Headline 14 position":" --","Headline 15":" --","Headline 15 position":" --","Description 1":"AK | the aesthetic of maximalism","Description 1 position":" --","Description 2":"Epochs, Genres, Bands, Artists, Albums, Songs, Bars, Notes, Timbres, Frequencies","Description 2 position":" --","Description 3":" --","Description 3 position":" --","Description 4":" --","Description 4 position":" --","Description 5":" --","Call to action text":" --","Call to action text 1":" --","Call to action text 2":" --","Call to action text 3":" --","Call to action text 4":" --","Call to action text 5":" --","Call to action headline":" --","Video ID":" --","Companion banner":" --","Ad name":" --","ad.display_url":" --","Path 1":" --","Path 2":" --","Mobile final URL":"","Tracking template":" --","Final URL suffix":" --","Custom parameter":"","Campaign":"ak-tunes-first-ad","Ad group":"Ad group 1","Status":"Pending","Status reasons":"under review","Ad type":"Responsive search ad","Currency code":"USD","Avg. CPV":" --","Impr.":"0","Interactions":"0","Interaction rate":" --","Avg. cost":" --","Cost":"0.00","Video":" --", "Date": "2023-01-01"}`,
-		},
-		{
-			role: "system",
-			name: "example_assistant",
-			content: `function transformToMixpanelEvent(sourceData) {
+{"Ad status":"Enabled","Final URL":"https://aktunes.com","Beacon URLs":" --","Headline":" --","Long headline 1":" --","Long headline 2":" --","Long headline 3":" --","Long headline 4":" --","Long headline 5":" --","Headline 1":"AK's music","Headline 1 position":" --","Headline 2":"lovingly made","Headline 2 position":" --","Headline 3":"candy for ears","Headline 3 position":" --","Headline 4":" --","Headline 4 position":" --","Headline 5":" --","Headline 5 position":" --","Headline 6":" --","Headline 6 position":" --","Headline 7":" --","Headline 7 position":" --","Headline 8":" --","Headline 8 position":" --","Headline 9":" --","Headline 9 position":" --","Headline 10":" --","Headline 10 position":" --","Headline 11":" --","Headline 11 position":" --","Headline 12":" --","Headline 12 position":" --","Headline 13":" --","Headline 13 position":" --","Headline 14":" --","Headline 14 position":" --","Headline 15":" --","Headline 15 position":" --","Description 1":"AK | the aesthetic of maximalism","Description 1 position":" --","Description 2":"Epochs, Genres, Bands, Artists, Albums, Songs, Bars, Notes, Timbres, Frequencies","Description 2 position":" --","Description 3":" --","Description 3 position":" --","Description 4":" --","Description 4 position":" --","Description 5":" --","Call to action text":" --","Call to action text 1":" --","Call to action text 2":" --","Call to action text 3":" --","Call to action text 4":" --","Call to action text 5":" --","Call to action headline":" --","Video ID":" --","Companion banner":" --","Ad name":" --","ad.display_url":" --","Path 1":" --","Path 2":" --","Mobile final URL":"","Tracking template":" --","Final URL suffix":" --","Custom parameter":"","Campaign":"ak-tunes-first-ad","Ad group":"Ad group 1","Status":"Pending","Status reasons":"under review","Ad type":"Responsive search ad","Currency code":"USD","Avg. CPV":" --","Impr.":"0","Interactions":"0","Interaction rate":" --","Avg. cost":" --","Cost":"0.00","Video":" --", "Date": "2023-01-01"}
+
+this is my function:
+
+function transformToMixpanelEvent(sourceData) {
   const { "Final URL": finalUrl, "Ad group": adGroup, "Campaign": campaign, "Status": status, "Cost": cost, ...otherProperties } = sourceData;
   const time = new Date().getTime();
 
@@ -153,18 +193,13 @@ export function getPrompt(sourceData) {
       ...otherProperties,
     },
   };
-}`,
-		},
-		{
-			role: "system",
-			name: "example_user",
-			content: `that was NOT correct. specifically:
-			
+}
+
+can you re-write my function where:
+
 the distinct_id should use the Campaign value, not the finalUrl value. time should use the Data value, not current time. the $insert_id should be a concatenation of Ad group, and Ad type.
 
-can you try again? this is my source data:
-
-${JSON.stringify(sourceData)}`,
+answer in CODE ONLY.`,
 		},
 		{
 			role: "system",
@@ -178,7 +213,7 @@ ${JSON.stringify(sourceData)}`,
     properties: {
       time,
       distinct_id: campaign,
-      "$insert_id": adGroup+'-'adType,
+      "$insert_id": adGroup+'-'+adType,
     },
   };
 }`,
@@ -187,23 +222,17 @@ ${JSON.stringify(sourceData)}`,
 			role: "user",
 			content: `this is my source data:
 
-${JSON.stringify(sourceData)}`,
-		},
-	];
-}
+${JSON.stringify(sourceData)}
 
-export function improvePrompt(sourceData, userFeedback) {
-	return [
-		{
-			role: "user",
-			content: `that was NOT correct. specifically:
-			
+this is my function:
+
+${priorFn}
+
+can you re-write my function such that:
+
 ${userFeedback}
 
-can you try again? this is my source data:
-
-${JSON.stringify(sourceData)}
-			`,
+answer in CODE ONLY.`,
 		},
 	];
 }

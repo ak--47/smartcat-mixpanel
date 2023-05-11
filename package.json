@@ -1,5 +1,5 @@
 {
-    "name": "ak-node-boiler",
+    "name": "smartcat-mixpanel",
     "version": "1.0.0",
     "description": "that is cool!",
     "main": "index.js",
@@ -11,7 +11,7 @@
         "test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js"
     },
     "bin": {
-        "my-module": "./index.js"
+        "smartcat-mixpanel": "./index.js"
     },
     "type": "module",
     "types": "./types/index.d.ts",

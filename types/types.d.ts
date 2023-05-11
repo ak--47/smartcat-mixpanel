@@ -2,9 +2,9 @@ declare namespace Types {
 	interface Params {
 		file: string;
 		format?: 'json' | 'jsonl' | 'csv' | 'tsv';
-		project_id?: number;
-		project_token?: string;
-		project_secret?: string;
+		mixpanel_id?: number;
+		mixpanel_token?: string;
+		mixpanel_secret?: string;
 		open_ai_key?: string;
 		
 	}

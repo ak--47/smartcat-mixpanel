@@ -11,16 +11,15 @@ function cli() {
 	const args = yargs(process.argv.splice(2))
 		.scriptName(NAME)
 		.usage(
-			`${welcome}\n\nusage:\nnpx ${NAME} --yes [file or folder] [options]
+			`SMARTCAT${cat}\t... meow!
 
-examples:
-npx  --yes  ${NAME} 
-npx  --yes  ${NAME} 
+usage:
+npx ${NAME} --yes [file or folder] [options]
 
-DOCS: https://github.com/ak--47/`
+DOCS: https://github.com/ak--47/snowcat-gpt`
 		)
 		.option("file", {
-			demandOption: true,
+			demandOption: false,
 			describe: "path to file",
 			type: "string",
 			alias: "f",
@@ -30,23 +29,22 @@ DOCS: https://github.com/ak--47/`
 			describe: "json, jsonl, csv, or tsv",
 			type: "string",
 			alias: "t",
-			default: "jsonl",
 		})
-		.option("project_id", {
+		.option("mixpanel_id", {
 			demandOption: false,
 			alias: "project",
 			describe: "mixpanel project id",
 			type: "number",
 		})
-		.option("project_token", {
+		.option("mixpanel_token", {
 			demandOption: false,
 			alias: "token",
 			describe: "mixpanel project token",
 			type: "string",
 		})
-		.option("project_secret", {
+		.option("mixpanel_secret", {
 			demandOption: false,
-			alias: "project",
+			alias: "secret",
 			describe: "mixpanel project secret",
 			type: "string",
 		})
@@ -59,6 +57,7 @@ DOCS: https://github.com/ak--47/`
 
 		.help().argv;
 
+	console.log(welcome);
 	// @ts-ignore
 	return args;
 }
@@ -66,10 +65,22 @@ DOCS: https://github.com/ak--47/`
 export default cli;
 
 const hero = String.raw`
-COOL!
+                                        888                     888    
+                                        888                     888    
+                                        888                     888    
+.d8888b  88888b.d88b.   8888b.  888d888 888888 .d8888b  8888b.  888888 
+88K      888 "888 "88b     "88b 888P"   888   d88P"        "88b 888    
+"Y8888b. 888  888  888 .d888888 888     888   888      .d888888 888    
+     X88 888  888  888 888  888 888     Y88b. Y88b.    888  888 Y88b.  
+ 88888P' 888  888  888 "Y888888 888      "Y888 "Y8888P "Y888888  "Y888                                                                                                                                                                                                                      
 `;
 
-const banner = `... tagline! (v${VERSION})
+const cat = String.raw`                                                                                                                                                                                                
+ /\_/\
+( o.o )
+ > ^ <
+`;
+const banner = `... "smart" import for mixpanel! (v${VERSION})
 \tby AK (ak@mixpanel.com)\n\n`;
 
 const welcome = hero.concat("\n").concat(banner);
