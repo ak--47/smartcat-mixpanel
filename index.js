@@ -38,11 +38,9 @@ async function main(config) {
 
 	//check for open ai key + store
 	if (!openai_api_key) openai_api_key = await getOpenAIKey();
-	await storage.set(`openai_api_key`, openai_api_key);
 
 	//check for mixpanel project secret + store
 	if (!mixpanel_secret) mixpanel_secret = await getMixpanelProjectSecret();
-	await storage.set(`mixpanel_secret`, mixpanel_secret);
 
 	//select a GPT model
 	let selectedModel = await selectGPTModel(openai_api_key);
@@ -171,9 +169,9 @@ async function selectGPTModel(openai_key) {
 	return selectedModel;
 }
 
-async function gptWriteTransform(sourceData, open_ai_key, transFormAsText = ``, userFeedback = ``, model, temperature) {
+async function gptWriteTransform(sourceData, openai_key, transFormAsText = ``, userFeedback = ``, model, temperature) {
 	console.log(`\n\nCONSULTING ${model.toUpperCase()}...`.cyan);
-	const transformAsText = await gpt(sourceData[0], open_ai_key, transFormAsText, userFeedback, model, temperature);
+	const transformAsText = await gpt(sourceData[0], openai_key, transFormAsText, userFeedback, model, temperature);
 	console.log(`\t...we got a response!\n\n`.yellow);
 	let transform;
 	let transformSample;
@@ -297,15 +295,18 @@ async function getOpenAIKey() {
 	}
 	console.log(`\t...didn't find it`.red + `  👎\n`);
 	//then ask
-	const { open_ai_api_key } = await inquirer.prompt([
+	const { openai_api_key } = await inquirer.prompt([
 		{
 			type: `input`,
-			name: `open_ai_api_key`,
+			name: `openai_api_key`,
 			message: `What is your OpenAI key?`,
 		},
 	]);
-	process.env.OPENAI_API_KEY = open_ai_api_key;
-	return open_ai_api_key;
+
+	const shouldSaveOpenAIKey = await genericConfirm(`Do you want to save your OpenAI API key for future use?`);
+	if (shouldSaveOpenAIKey) await storage.set(`openai_api_key`, openai_api_key);
+	process.env.OPENAI_API_KEY = openai_api_key;
+	return openai_api_key;
 }
 
 async function getMixpanelProjectSecret() {
@@ -333,10 +334,22 @@ async function getMixpanelProjectSecret() {
 		},
 	]);
 	process.env.MIXPANEL_SECRET = mixpanel_secret;
+	const shouldSaveMixpanelSecret = await genericConfirm(`Do you want to save your Mixpanel Secret for future use?`);
+	if (shouldSaveMixpanelSecret) await storage.set(`mixpanel_secret`, mixpanel_secret);
 	return mixpanel_secret;
 }
 
-export default main;
+async function genericConfirm(msg = `Confirm?`) {
+	const { confirm } = await inquirer.prompt([
+		{
+			type: `confirm`,
+			name: `confirm`,
+			message: msg,
+			default: true,
+		},
+	]);
+	return confirm;
+}
 
 if (esMain(import.meta)) {
 	const params = cli();
@@ -367,3 +380,5 @@ if (esMain(import.meta)) {
 			});
 	}
 }
+
+export default main;
