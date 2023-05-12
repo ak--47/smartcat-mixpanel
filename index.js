@@ -22,7 +22,7 @@ import * as c from "./cli/colors.js";
 import u from "ak-tools";
 import Papa from "papaparse";
 //tracking
-const track = u.tracker(`${NAME}-${VERSION}}`, `beec588098f307aea3674d97130498ca`);
+const track = u.tracker(`${NAME}-${VERSION}`, `beec588098f307aea3674d97130498ca`);
 const sessionId = u.uuid();
 
 import gpt, { getGPTModels } from "./components/openai.js";
@@ -217,6 +217,7 @@ async function getFormatAndDataAsJson(file, format) {
 				type: "file-tree-selection",
 				name: `file`,
 				message: `choose your file`,
+				enableGoUpperDirectory: true,
 			},
 		]));
 
