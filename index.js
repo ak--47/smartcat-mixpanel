@@ -2,8 +2,12 @@
 
 import esMain from "es-main";
 import * as dotenv from "dotenv";
+import path from "path";
 import inquirer from "inquirer";
+import inquirerFileTreeSelection from "inquirer-file-tree-selection-prompt";
+inquirer.registerPrompt("file-tree-selection", inquirerFileTreeSelection);
 import { existsSync } from "fs";
+
 dotenv.config();
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
@@ -43,6 +47,7 @@ async function main(config) {
 	if (!mixpanel_secret) mixpanel_secret = await getMixpanelProjectSecret();
 
 	//select a GPT model
+	console.log("\n");
 	let selectedModel = await selectGPTModel(openai_api_key);
 
 	//check format + parse
@@ -209,14 +214,15 @@ async function getFormatAndDataAsJson(file, format) {
 	if (!file) {
 		({ file } = await inquirer.prompt([
 			{
-				type: `input`,
+				type: "file-tree-selection",
 				name: `file`,
-				message: `What is the path to your data file?`,
+				message: `choose your file`,
 			},
 		]));
 
 		//strip quotes from file
-		file = file.replace(/"/g, "").replace(/'/g, "");
+		// file = file.replace(/"/g, "").replace(/'/g, "");
+		file = path.normalize(file);
 	} else {
 		console.log(`\t...found file: ${file}`.yellow);
 	}

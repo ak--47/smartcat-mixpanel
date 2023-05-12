@@ -1,6 +1,6 @@
 {
     "name": "smartcat-mixpanel",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "one smart cat... who loves importing event data into mixpanel",
     "main": "index.js",
     "scripts": {
@@ -28,6 +28,7 @@
         "fastify": "^4.15.0",
         "got": "^12.6.0",
         "inquirer": "^9.2.2",
+        "inquirer-file-tree-selection-prompt": "^2.0.5",
         "mixpanel-import": "^2.3.6",
         "node-persist": "^3.1.3",
         "openai": "^3.2.1",
