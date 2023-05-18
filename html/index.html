@@ -1,14 +1,203 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="utf-8" />
-		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-		<title>you hath arrived</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<link rel="stylesheet" type="text/css" media="screen" href="style.css" />
-		<script src="app.js"></script>
-	</head>
-	<body>
-		ahoy!
-	</body>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>SmartCat</title>
+	<link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+	<link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+	<section id="upload">
+		<input type="file" id="file_input" accept=".json,.txt" />
+		<button id="file_upload">choose file...</button>
+	</section>
+	<section id="type">
+		<div class="prompt">
+			<span class="title"> What type of data are you importing<a target="_blank"
+					href="https://developer.mixpanel.com/docs/data-structure-deep-dive">?</a> </span>
+			<select id="record_type" class="data">
+				<option value="event">🚀 events</option>
+				<option value="user">👥 user profiles</option>
+				<option value="group">🏢 group profiles</option>
+				<option value="table">🔍 lookup tables</option>
+			</select>
+		</div>
+	</section>
+
+	<section id="mappings">
+		<div class="prompt">
+			<span class="title">
+				🧭 What are the mappings from your columns headers to Mixpanel <span id="type_label">event</span>
+				fields<a target="_blank"
+					href="https://developer.mixpanel.com/docs/data-structure-deep-dive#anatomy-of-an-event">?</a>
+			</span>
+			<span id="file_name_label"></span>
+			<ul id="event_mapping" class="mapping">
+				<li><select id="event_name_col" class="data dropdown required">
+						<option value="">--------</option>
+					</select> → <span class="field">event name</span>&nbsp;&nbsp;&nbsp;<input type="text"
+						id="hardcode_event_name" class="data field optional hardcode hidden"
+						placeholder="name for all events" size="120"> </li>
+				<li><select id="distinct_id_col" class="data dropdown required">
+						<option value="">--------</option>
+					</select> → <span class="field">distinct_id</span> <input type="text" id="hardcode_distinct_id"
+						class="data field optional hardcode hidden" placeholder="distinct_id for all events" size="120">
+				</li>
+				<li><select id="time_col" class="data dropdown required">
+						<option value="">--------</option>
+					</select> → <span class="field">time</span><span class="optional note">(must be a <strong>valid date
+							time</strong> in sheet)</span></li>
+				<li><select id="insert_id_col" class="data dropdown optional">
+						<option value="">--------</option>
+					</select> → <span class="field">$insert_id</span> <span class="optional">(optional; used to
+						deduplicate)</span></li>
+			</ul>
+			<span class="subtext">all unmapped columns will be sent as
+				properties</span>
+			<ul id="user_mapping" class="mapping hidden">
+				<li><select id="distinct_id_col" class="data dropdown">
+						<option value="">--------</option>
+					</select> → <span class="field">$distinct_id</span>
+				</li>
+				<li><select id="name_col" class="data dropdown optional">
+						<option value="">--------</option>
+					</select> → <span class="field">$name</span> <span class="optional">(optional)</span></li>
+				<li><select id="email_col" class="data dropdown optional">
+						<option value="">--------</option>
+					</select> → <span class="field">$email</span> <span class="optional">(optional)</span></li>
+				<li class="hidden"><select id="avatar_col" class="data dropdown optional">
+						<option value="">--------</option>
+					</select> → <span class="field">$avatar</span> <span class="optional">(optional)</span></li>
+				<li class="hidden"><select id="created_col" class="data dropdown optional">
+						<option value="">--------</option>
+					</select> → <span class="field">$created</span> <span class="optional">(optional)</span></li>
+				<li>
+					<select id="profile_operation" class="data dropdown required">
+						<option value="$set">$set</option>
+						<option value="$set_once">$set_once</option>
+					</select> &emsp; <span class="optional">profile update type</span>
+				</li>
+			</ul>
+			<ul id="group_mapping" class="mapping hidden">
+				<li><input type="text" id="group_key" class="data field required" placeholder="company_id" size="120"> →
+					<span class="field">$group_key</span>
+				</li>
+				<li><select id="distinct_id_col" class="data dropdown">
+						<option value="">--------</option>
+					</select> → <span class="field required">$group_id</span></li>
+				<li><select id="name_col" class="data dropdown optional">
+						<option value="">--------</option>
+					</select> → <span class="field required">$name</span> <span class="optional">(optional)</span></li>
+				<li><select id="email_col" class="data dropdown optional">
+						<option value="">--------</option>
+					</select> → <span class="field required">$email</span> <span class="optional">(optional)</span></li>
+				<li class="hidden"><select id="avatar_col" class="data dropdown">
+						<option value="">--------</option>
+					</select> → <span class="field required">$avatar</span> <span class="optional">(optional)</span>
+				</li>
+				<li class="hidden"><select id="created_col" class="data dropdown">
+						<option value="">--------</option>
+					</select> → <span class="field required">$created</span> <span class="optional">(optional)</span>
+				</li>
+				<li>
+					<select id="profile_operation" class="data dropdown required">
+						<option value="$set">$set</option>
+						<option value="$set_once">$set_once</option>
+					</select> &emsp; <span class="optional">profile update type</span>
+				</li>
+			</ul>
+			<ul id="table_mapping" class="mapping hidden">
+				<li><input type="text" id="lookup_table_id" class="data field" placeholder="abc-123-xyz-456"> → <span
+						class="field">lookup table id</span>
+				</li>
+			</ul>
+		</div>
+	</section>
+
+	<section id="auth">
+		<div class="prompt">
+			<span class="title">🏠 What is your project's id<a target="_blank"
+					href="https://mixpanel.com/settings/project">?</a></span>
+			<input type="text" id="project_id" class="data" placeholder="123456789">
+		</div>
+		<div class="prompt">
+			<span class="title">🎟 What is your project's token<a target="_blank"
+					href="https://mixpanel.com/settings/project">?</a></span>
+			<input type="text" id="token" class="data" placeholder="abcdefghijklmnop">
+		</div>
+		<div class="prompt">
+			<span class="title">🌍 What is your project's region<a target="_blank"
+					href="https://mixpanel.com/settings/project">?</a></span>
+			<select id="region" class="data">
+				<option value="US">🇺🇸 United States</option>
+				<option value="EU">🇪🇺European Union</option>
+			</select>
+		</div>
+		<div class="prompt">
+			<span class="title">🔑 How will you authenticate<a target="_blank"
+					href="https://developer.mixpanel.com/reference/service-accounts">?</a></span>
+			<select id="auth_type" class="data">
+				<option value="api_secret">🔐 api secret</option>
+				<option value="service_account">🤖 service account</option>
+			</select>
+		</div>
+		<div class="prompt">
+			<span class="title">Provide your authentication details: </span>
+			<span id="api_secret_form">
+				<input type="text" id="api_secret" placeholder="api secret" class="data">
+			</span>
+			<span id="service_acct_form" class="hidden">
+				<input type="text" id="service_acct" placeholder="service account user" class="data">
+				<input type="text" id="service_secret" placeholder="service account secret" class="data">
+			</span>
+
+		</div>
+
+	</section>
+
+	<section id="controls">
+		<div>
+			<button id="run" class="share" disabled>
+				<svg-icon icon="event" class="mp-icon">
+					<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">
+						<path
+							d="M9.014 9.64l3.068 8.766a.2.2 0 00.381-.01l1.376-4.803 4.54-1.297a.2.2 0 00.008-.382L9.644 9a.5.5 0 00-.63.64z"
+							stroke="currentColor" stroke-width="1.5"></path>
+						<path d="M9 3v2M3 9h2M4.786 13.164L6.2 11.75M13.573 4.813L12.16 6.228M4.814 4.813l1.414 1.415"
+							stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+					</svg></svg-icon> run
+			</button>
+
+		</div>
+	</section>
+
+	<section id="status" class="bottom">
+		<div>
+			<div class="mp-spinner hidden" id="loader">
+				<svg-icon icon="spinner"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="22"
+						height="22">
+						<path fill="currentColor"
+							d="M43.935 25.145c0-10.318-8.364-18.683-18.683-18.683-10.318 0-18.683 8.365-18.683 18.683h4.068c0-8.071 6.543-14.615 14.615-14.615s14.615 6.543 14.615 14.615h4.068z">
+						</path>
+					</svg>
+				</svg-icon>
+			</div>
+			<span class="gray" id="status_text"></span>
+		</div>
+		<div>
+			<span><a id="project_link" target="_blank" href=""></a></span>
+		</div>
+	</section>
+	<section id="docs" class="hidden">
+		<a href="https://github.com/mixpanel/sheets#%EF%B8%8F-mappings-sheet--mixpanel" target="_blank">help docs</a> |
+		<a href="https://forms.gle/qwhAXE2r2TBAdiQy9" target="_blank">support form</a>
+	</section>
+
+	<script src="./filesave.js"></script>
+	<script src="./app.js"></script>
+</body>
+
 </html>

@@ -13,8 +13,8 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const { name: NAME, version: VERSION } = require("./package.json");
 
-import cli from "./cli/cli.js";
-// import server from "./server/server.js";
+// import cli from "./cli/cli.js";
+import server from "./server/server.js";
 import storage from "./components/persistence.js";
 
 // eslint-disable-next-line no-unused-vars
@@ -359,33 +359,45 @@ async function genericConfirm(msg = `Confirm?`) {
 }
 
 if (esMain(import.meta)) {
-	const params = cli();
+	server();
+	// .then(() => {
+	// 	// noop
+	// })
+	// .catch((e) => {
+	// 	console.log(`\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n`.red);
+	// })
+	// .finally(() => {
+	// 	console.log("\n\nhave a great day!\n\n".cyan);
+	// 	process.exit(0);
+	// });
 
-	if (params.clear) {
-		storage
-			.remove()
-			.then(() => {
-				console.log(`\n\nstorage cleared!\n\n`.cyan);
-			})
-			.catch((e) => {
-				console.log(`\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n`.red);
-			})
-			.finally(() => {
-				process.exit(0);
-			});
-	} else {
-		main(params)
-			.then(() => {
-				//noop
-			})
-			.catch((e) => {
-				console.log(`\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n`.red);
-			})
-			.finally(() => {
-				console.log("\n\nhave a great day!\n\n".cyan);
-				process.exit(0);
-			});
-	}
+	// const params = cli();
+
+	// if (params.clear) {
+	// 	storage
+	// 		.remove()
+	// 		.then(() => {
+	// 			console.log(`\n\nstorage cleared!\n\n`.cyan);
+	// 		})
+	// 		.catch((e) => {
+	// 			console.log(`\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n`.red);
+	// 		})
+	// 		.finally(() => {
+	// 			process.exit(0);
+	// 		});
+	// } else {
+	// 	main(params)
+	// 		.then(() => {
+	// 			//noop
+	// 		})
+	// 		.catch((e) => {
+	// 			console.log(`\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n`.red);
+	// 		})
+	// 		.finally(() => {
+	// 			console.log("\n\nhave a great day!\n\n".cyan);
+	// 			process.exit(0);
+	// 		});
+	// }
 }
 
 export default main;

@@ -1,223 +1,378 @@
-//@ts-nocheck
+/* eslint-disable no-unused-vars */
+// @ts-nocheck
+const qs = document.querySelector.bind(document);
+const qsa = document.querySelectorAll.bind(document);
 
 const app = {
 	//storage
-	data: {},
 	DOM: {},
-
-	//bootstrap
 	init,
 
 	//interactive
 	cacheDOM,
 	bindEventsAndViews,
-
-	//display
-	hide,
-	show,
-	activate,
-	deactivate,
+	buildDropdowns,
+	loader,
 
 	//validation
 	getFields,
 	checkFields,
-	validate,
+	isValid,
 
-	//get + set
+	//parsing
+	handleFileUpload,
+	parseServerTemplate,
+
 	getConfig,
-	getForm,
-	fillForm,
+
+	//buttons
+	run,
 };
 
 function init() {
 	this.DOM = this.cacheDOM();
+	// this.buildDropdowns(this.DOM.columns);
 	this.bindEventsAndViews();
+	// this.freezeView();
 }
 
 /*
 ----
-DOM
+DOM STUFF
 ----
 */
 
 function cacheDOM() {
 	return {
-		//dom stuff goes here
+		//screens
+		typeSelector: qs("#record_type"),
+		eventMappings: qs("#event_mapping"),
+		userMappings: qs("#user_mapping"),
+		groupMappings: qs("#group_mapping"),
+		tableMappings: qs("#table_mapping"),
+		howAuth: qs("#auth_type"),
+		serviceAcctForm: qs("#service_acct_form"),
+		apiSecretForm: qs("#api_secret_form"),
+
+		//fields
+		projectId: qs("#project_id"),
+		token: qs("#token"),
+		region: qs("#region"),
+		serviceUser: qs("#service_acct"),
+		serviceSecret: qs("#service_secret"),
+		apiSecret: qs("#api_secret"),
+		allMappingFields: Array.from(qsa("select.dropdown.data, input.data.field")),
+		allUserInputFields: Array.from(qsa("select, input, button, .data")),
+
+		//labels
+		typeLabel: qs("#type_label"),
+		docs: qs("#docs"),
+
+		//buttons
+		runButton: qs("#run"),
+		uploadButton: qs("#file_upload"),
+		hiddenFileLoader: qs("#file_input"),
+
+		//status
+		loader: qs("#loader"),
+		status: qs("#status_text"),
+		sheetNameLabel: qs("#file_name_label"),
+		projectLink: qs("#project_link"),
 	};
 }
 
+function buildDropdowns(columns) {
+	const selectMenus = Array.from(qsa("select.data.dropdown")).filter((node) => node.id !== "profile_operation");
+
+	// const existingCols = Object.values(filterObj(app.DOM.config, key => key.endsWith("_col"), "key"));
+	// for (const col of existingCols) {
+	// 	columns.push(col);
+	// }
+
+	for (const select of selectMenus) {
+		for (const column of columns) {
+			const opt = document.createElement("option");
+			opt.value = column;
+			opt.innerHTML = column;
+			select.appendChild(opt);
+		}
+		if (select.parentNode.parentElement.id === "event_mapping") {
+			if (["event_name_col", "distinct_id_col"].includes(select.id)) {
+				const hardcodeOpt = document.createElement("option");
+				hardcodeOpt.value = "hardcode";
+				hardcodeOpt.innerHTML = `Other (specify)`;
+				select.appendChild(hardcodeOpt);
+				select.addEventListener("change", (ev) => {
+					if (ev.currentTarget.value === "hardcode") {
+						ev.currentTarget.nextElementSibling.nextElementSibling.classList.remove("hidden");
+						ev.currentTarget.nextElementSibling.nextElementSibling.classList.remove("optional");
+						ev.currentTarget.nextElementSibling.nextElementSibling.classList.add("required");
+					} else {
+						ev.currentTarget.nextElementSibling.nextElementSibling.classList.add("hidden");
+						ev.currentTarget.nextElementSibling.nextElementSibling.classList.add("optional");
+						ev.currentTarget.nextElementSibling.nextElementSibling.classList.remove("required");
+					}
+				});
+			}
+		}
+	}
+}
+
 function bindEventsAndViews() {
-	// "real-time" field validation + data updates
-	const allInteractive = qsa("input, select");
-	for (const node of allInteractive) {
-		if (node.tagName === "SELECT") {
-			node.addEventListener("change", () => {
+	//upload
+	this.DOM.hiddenFileLoader.addEventListener("change", handleFileUpload, false);
+
+	// TYPES + MAPPINGS
+	this.DOM.typeSelector.addEventListener("change", (e) => {
+		const newVal = e.currentTarget.value;
+		this.DOM.typeLabel.innerText = newVal;
+		if (newVal === "event") {
+			this.DOM.eventMappings.classList.remove("hidden");
+			this.DOM.userMappings.classList.add("hidden");
+			this.DOM.groupMappings.classList.add("hidden");
+			this.DOM.tableMappings.classList.add("hidden");
+			//hide syncs for events
+			qs('#auth_type option[value="api_secret"]').disabled = false;
+		}
+		if (newVal === "user") {
+			this.DOM.eventMappings.classList.add("hidden");
+			this.DOM.userMappings.classList.remove("hidden");
+			this.DOM.groupMappings.classList.add("hidden");
+			this.DOM.tableMappings.classList.add("hidden");
+			qs('#auth_type option[value="api_secret"]').disabled = false;
+		}
+		if (newVal === "group") {
+			this.DOM.eventMappings.classList.add("hidden");
+			this.DOM.userMappings.classList.add("hidden");
+			this.DOM.groupMappings.classList.remove("hidden");
+			this.DOM.tableMappings.classList.add("hidden");
+
+			qs('#auth_type option[value="api_secret"]').disabled = false;
+		}
+		if (newVal === "table") {
+			this.DOM.eventMappings.classList.add("hidden");
+			this.DOM.userMappings.classList.add("hidden");
+			this.DOM.groupMappings.classList.add("hidden");
+			this.DOM.tableMappings.classList.remove("hidden");
+			setValues("#auth_type", "service_account");
+			qs('#auth_type option[value="api_secret"]').disabled = true;
+		}
+	});
+
+	// AUTH DETAILS
+	this.DOM.howAuth.addEventListener("change", (e) => {
+		const newVal = e.currentTarget.value;
+		if (newVal === "service_account") {
+			this.DOM.apiSecretForm.classList.add("hidden");
+			this.DOM.serviceAcctForm.classList.remove("hidden");
+		}
+
+		if (newVal === "api_secret") {
+			this.DOM.apiSecretForm.classList.remove("hidden");
+			this.DOM.serviceAcctForm.classList.add("hidden");
+		}
+	});
+
+	// "real-time" field validation
+	for (const key in this.DOM) {
+		if (this.DOM[key].tagName === "SELECT") {
+			this.DOM[key].addEventListener("change", () => {
 				this.checkFields();
 			});
 		}
 
-		if (node.tagName === "INPUT") {
-			node.addEventListener("input", () => {
+		if (this.DOM[key].tagName === "INPUT") {
+			this.DOM[key].addEventListener("input", () => {
+				this.checkFields();
+			});
+		}
+	}
+	for (const dataField of this.DOM.allMappingFields) {
+		if (dataField.tagName === "SELECT") {
+			dataField.addEventListener("change", () => {
+				this.checkFields();
+			});
+		}
+
+		if (dataField.tagName === "INPUT") {
+			dataField.addEventListener("input", () => {
 				this.checkFields();
 			});
 		}
 	}
 
-	//other listeners
+	// actions
+	this.DOM.runButton.addEventListener("click", () => {
+		//todo
+	});
+
+	this.DOM.uploadButton.addEventListener("click", () => {
+		this.DOM.hiddenFileLoader.click();
+	});
 }
 
 /*
 ----
-FIELDS
+GETTERS
 ----
 */
 
-function checkFields() {
-	const userData = this.getFields();
-	this.data = userData;
-	this.activate(this.DOM.saveButton);
-	this.activate(this.DOM.clearButton);
-	const isValid = this.validate(userData);
-	if (isValid) {
-		this.activate(this.DOM.testButton);
-	} else {
-		this.deactivate(this.DOM.testButton);
-	}
-}
-
-function getFields(visible = true) {
-	let fields;
-	if (visible) {
-		// enumerate all visible forms
-		fields = filterObj(this.DOM, (el) => {
-			// https://stackoverflow.com/a/21696585
-			return el.offsetParent && el.tagName === "FORM";
-		});
-	} else {
-		fields = {};
-		const forms = qsa("form");
-		for (const form of forms) {
-			fields[form.id] = getForm(form);
-		}
-		return fields;
-	}
-
-	const data = mapObj(fields, (node) => {
-		return getForm(node);
-	});
-
-	//additional fields here
-
-	return data;
-}
-
 function getConfig() {
-	const userData = this.getFields();
-	this.data = userData;
+	const userData = mergeObj(Object.values(this.getFields()));
 	return userData;
 }
 
-function validate(config) {
-	//todo
-}
+function checkFields() {
+	const userData = mergeObj(Object.values(this.getFields()));
+	userData.config_type = "sheet-to-mixpanel";
+	const valid = this.isValid(userData);
+	this.DOM.status.innerText = "";
+	this.DOM.projectLink.innerText = "";
+	// console.log(JSON.stringify(userData, null, 2));
 
-function getForm(elForm) {
-	// eslint-disable-next-line no-unsafe-negation
-	if (!elForm instanceof Element) return;
-	var fields = elForm.querySelectorAll("input, select, textarea"),
-		o = {};
-	for (var i = 0, imax = fields.length; i < imax; ++i) {
-		var field = fields[i],
-			sKey = field.name || field.id;
-		if (
-			field.type === "button" ||
-			field.type === "image" ||
-			field.type === "submit" ||
-			!sKey
-		)
-			continue;
-		switch (field.type) {
-			case "checkbox":
-				o[sKey] = field.checked;
-				break;
-			case "radio":
-				if (o[sKey] === undefined) o[sKey] = "";
-				if (field.checked) o[sKey] = field.value;
-				break;
-			case "select-multiple":
-				var a = [];
-				for (var j = 0, jmax = field.options.length; j < jmax; ++j) {
-					if (field.options[j].selected) a.push(field.options[j].value);
-				}
-				o[sKey] = a;
-				break;
-			default:
-				o[sKey] = field.value;
-		}
+	if (valid) {
+		this.DOM.runButton.disabled = false;
+	} else {
+		this.DOM.runButton.disabled = true;
 	}
-	return o;
 }
 
-function fillForm(data = "", form = document) {
-	if (!isObject(data)) return;
-	for (var param in data) {
-		var el =
-			form.querySelector(`#${param}`) ||
-			form.querySelector("[name=" + param + "]");
-		if (el.type === "radio") el = form.querySelectorAll("[name=" + param + "]");
+function getFields() {
+	// enumerate all visible fields
+	const visible = filterObj(this.DOM, (el) => {
+		// https://stackoverflow.com/a/21696585
+		return el.offsetParent && (el.classList.contains("data") || el.classList.contains("mapping"));
+	});
 
-		switch (typeof data[param]) {
-			case "number":
-				el.checked = data[param];
-				break;
-			case "boolean":
-				el.checked = Number(data[param]);
-				break;
-			case "object":
-				if (el.options && data[param] instanceof Array) {
-					for (var j = 0, jmax = el.options.length; j < jmax; ++j) {
-						if (data[param].indexOf(el.options[j].value) > -1)
-							el.options[j].selected = true;
-					}
-				}
-				break;
-			default:
-				if (el instanceof NodeList) {
-					// eslint-disable-next-line no-redeclare
-					for (var j = 0, jmax = el.length; j < jmax; ++j) {
-						if (el[j].value === data[param]) el[j].checked = true;
-					}
-				} else {
-					el.value = data[param];
-				}
+	const fields = mapObj(visible, (node) => {
+		if (node.classList.contains("mapping")) {
+			const mappingsDOM = Array.from(node.querySelectorAll("select, input"));
+			const mappingsArr = mappingsDOM.map((mapping) => {
+				return { [mapping.id]: mapping.value };
+			});
+			const mappings = mergeObj(mappingsArr);
+			return mappings;
+		} else {
+			return { [node.id]: node.value };
 		}
+	});
+
+	return fields;
+}
+
+function parseServerTemplate(node) {
+	try {
+		return JSON.parse(node.innerText);
+	} catch (e) {
+		return {};
 	}
 }
 
 /*
 ----
-DISPLAY
+SETTERS
 ----
 */
 
-function show(elements = []) {
-	if (!Array.isArray(elements)) elements = [elements];
-	elements.forEach((el) => el.classList.remove("is-hidden"));
+//handle file loading
+function handleFileUpload() {
+	const file = this.files[0];
+	const fileReader = new FileReader();
+	fileReader.addEventListener("load", function (event) {
+		//todo
+		// const parsedData = JSON.parse(fileReader.result);
+		// //tweak the seed
+		// if (tweakSeed) {
+		// 	parsedData.config.seed += ` ${dm.methods.makeId(5)}`;
+		// }
+		// let loadEvent = new CustomEvent("load", {
+		// 	bubbles: true,
+		// 	composed: true,
+		// 	detail: parsedData,
+		// });
+		// host.dispatchEvent(loadEvent);
+	});
+
+	fileReader.readAsText(file);
 }
 
-function hide(elements = []) {
-	if (!Array.isArray(elements)) elements = [elements];
-	elements.forEach((el) => el.classList.add("is-hidden"));
+function setValues(cssSelector, value) {
+	Array.from(qsa(cssSelector)).forEach((node) => {
+		node.value = value;
+		if (node.tagName === "INPUT") node.dispatchEvent(new Event("input"));
+		if (node.tagName === "SELECT") node.dispatchEvent(new Event("change"));
+	});
 }
 
-function activate(elements = []) {
-	if (!Array.isArray(elements)) elements = [elements];
-	elements.forEach((el) => (el.disabled = false));
+/*
+----
+RUN SERVER SIDE FUNCTIONS
+----
+*/
+
+function run() {
+	this.loader("show");
+	this.DOM.status.innerText = `syncing data!`;
+	this.DOM.runButton.disabled = true;
+	//todo routes
 }
 
-function deactivate(elements = []) {
-	if (!Array.isArray(elements)) elements = [elements];
-	elements.forEach((el) => (el.disabled = true));
+/*
+----
+VALIDATION
+----
+*/
+
+function isValid(config) {
+	const { record_type, project_id, token, region, auth_type, service_acct, service_secret, api_secret } = config;
+	if (!project_id) return false;
+	if (!token) return false;
+	if (auth_type === "service_account") {
+		if (!service_acct || !service_secret) return false;
+	}
+	if (auth_type === "api_secret") {
+		if (!api_secret) return false;
+	}
+
+	if (record_type === "event") {
+		const { event_name_col, distinct_id_col, time_col, insert_id_col, hardcode_event_name, hardcode_distinct_id } =
+			config;
+		if (!event_name_col) return false;
+		// don't force distinct_id for ad spend data
+		// if (!distinct_id_col) return false;
+		if (!time_col) return false;
+		if (event_name_col === "hardcode" && !hardcode_event_name) return false;
+		if (distinct_id_col === "hardcode" && !hardcode_distinct_id) return false;
+	}
+
+	if (record_type === "user") {
+		const { distinct_id_col, name_col, email_col, avatar_col, created_col } = config;
+		if (!distinct_id_col) return false;
+	}
+
+	if (record_type === "group") {
+		const { distinct_id_col, name_col, email_col, avatar_col, created_col, group_key } = config;
+		if (!group_key) return false;
+		if (!distinct_id_col) return false;
+	}
+
+	if (record_type === "table") {
+		const { lookup_table_id } = config;
+		if (!lookup_table_id) return false;
+	}
+
+	return true;
+}
+
+function loader(directive) {
+	if (directive === "show") {
+		this.DOM.loader.style.display = "inline-block";
+		this.DOM.loader.classList.remove("hidden");
+	}
+	if (directive === "hide") {
+		this.DOM.loader.style.display = "";
+		this.DOM.loader.classList.add("hidden");
+	}
 }
 
 /*
@@ -226,29 +381,10 @@ UTILITIES
 ----
 */
 
-const qs = function qs(queryString) {
-	return document.querySelector(queryString);
-};
-
-const qsa = function qsa(queryString) {
-	return Array.from(document.querySelectorAll(queryString));
-};
-
 function comma(num) {
 	return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-/**
- * filter objects by values or objects by keys; like `map()` for objects
- * @example
- * const d = {foo: "bar", baz: "qux"}
- * objFilter(d, x => x.startsWith('b')) // => {foo: "bar"}
- * objFilter(d, x => x.startsWith('f'), 'key') // => {foo: "bar"}
- * @param  {generalObject} hash - object or array to filter
- * @param  {filterCallback} test_function - a function which is called on keys/values
- * @param  {"key" | "value"} [keysOrValues="value"] - test keys or values; default `value`
- * @returns {Object} filtered object
- */
 function filterObj(hash, test_function, keysOrValues = "value") {
 	let key, i;
 	const iterator = Object.keys(hash);
@@ -270,14 +406,6 @@ function filterObj(hash, test_function, keysOrValues = "value") {
 	return filtered;
 }
 
-/**
- * map over an object's values and return a new object
- * @example
- * objMap({foo: 2, bar: 4}, val => val * 2) => {foo: 4, bar: 8}
- * @param  {Object} object object iterate
- * @param  {function} mapFn function with signature `(val) => {}`
- * @returns {Object} filtered object
- */
 function mapObj(object, mapFn) {
 	return Object.keys(object).reduce(function (result, key) {
 		result[key] = mapFn(object[key]);
@@ -288,17 +416,12 @@ function mapObj(object, mapFn) {
 function mergeObj(arr) {
 	return arr.reduce(function (acc, current) {
 		for (var key in current) {
-			// eslint-disable-next-line no-prototype-builtins
 			if (current.hasOwnProperty(key)) {
 				acc[key] = current[key];
 			}
 		}
 		return acc;
 	}, {});
-}
-
-function isObject(arg) {
-	return Object.prototype.toString.call(arg) === "[object Object]";
 }
 
 app.init(); //😎 BOOM!

@@ -1,0 +1,202 @@
+/* CSS */
+
+:root {
+	--mixpanel: #7856ff;
+	--purple: #4f44e0;
+	--red: #e34f2f;
+	--orange: #df7800;
+	--green: #219464;
+	--lightGray: #626266;
+	--gray: #2a2a2f;
+}
+
+section {
+	padding: 2vw;
+}
+
+button {
+	font-size: 17px;
+	text-transform: lowercase !important;
+	border-radius: 6px !important;
+	border: 1px solid var(--gray) !important;
+}
+
+input[disabled] {
+	background-color: var(--white);
+	opacity: 0.5;
+}
+
+button:hover:not([disabled]) {
+	box-shadow: 0 1px 2px 0 var(--gray), 0 2px 4px 0 var(--lightGray);
+	cursor: pointer;
+}
+
+#sync_notification {
+	position: absolute;
+	width: 250px;
+	right: 15%;
+	color: var(--orange);
+	font-size: 14px;
+}
+
+#sync_notification_sheet {
+	font-weight: bolder;
+	color: var(--purple);
+}
+
+span.subtext {
+	opacity: 0.5;
+	font-size: 10px;
+	padding-left: 2%;
+}
+
+
+#run {
+	background: var(--purple);
+}
+
+#file_input {
+	display: none;
+}
+
+
+select {
+	font-size: 14px;
+	padding: 2px;
+	width: 180px;
+	text-indent: 5%;
+	text-align: left;
+}
+
+input[type="text"] {
+	width: 180px;
+}
+
+#group_key {
+	width: 140px;
+}
+
+.dropdown {
+	width: 140px;
+}
+
+#status {
+	position: relative;
+	/* top: 40%;
+			right: 10%;
+			font-size: 17px; */
+}
+
+#status span {
+	vertical-align: super;
+}
+
+.title {
+	padding-bottom: 5px;
+	display: block;
+}
+
+.mp-icon {
+	display: inline-block;
+	height: 20px;
+	width: 20px;
+	vertical-align: text-top;
+}
+
+#sheet_name_label {
+	color: var(--red);
+	opacity: 0.4;
+	font-size: 10.5px;
+	padding-left: 2%;
+}
+
+.hardcode {
+	margin-left: 1% !important;
+}
+
+div {
+	padding: 6px;
+}
+
+span.note {
+	padding-left: 6px;
+}
+
+#type_label {
+	color: var(--red);
+	font-weight: bold;
+}
+
+.field {
+	font-family: monospace;
+	color: var(--mixpanel);
+	font-size: 15px;
+}
+
+.prompt {
+	font-size: 15px;
+	color: var(--gray);
+}
+
+.hidden {
+	display: none;
+}
+
+.optional {
+	color: var(--lightGray);
+	font-size: 12px;
+	opacity: 0.5;
+}
+
+li {
+	padding-bottom: 4px;
+}
+
+ul,
+ol {
+	list-style: none;
+	margin-bottom: 0px;
+	margin-top: 1%;
+}
+
+/* SPINNER */
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.mp-spinner {
+	height: 20px;
+	width: 20px;
+	animation: 0.7s linear 0s infinite normal none running spin;
+	transform: translateZ(0px);
+}
+
+.mp-spinner svg-icon {
+	display: inline-block;
+	height: 100%;
+	min-height: 100%;
+	min-width: 100%;
+	position: relative;
+	width: 100%;
+}
+
+.mp-spinner svg-icon svg {
+	color: var(--mixpanel);
+}
+
+.mp-spinner svg-icon svg {
+	display: block;
+	height: 100%;
+	left: 0px;
+	min-height: 100%;
+	min-width: 100%;
+	position: absolute;
+	top: 0px;
+	width: 100%;
+}

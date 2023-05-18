@@ -5,6 +5,7 @@
     "main": "index.js",
     "scripts": {
         "start": "node index.js",
+		"dev": "nodemon --inspect index.js",
         "scratch": "nodemon --inspect -i ./tmp scratch.js",
         "prune": "rm -rf ./tmp/*",
         "post": "npm publish",
